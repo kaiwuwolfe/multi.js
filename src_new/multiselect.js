@@ -5,7 +5,7 @@
  * Author: Fabian Lindfors
  * License: MIT
  */
-var multi = (function() {
+var multiselect = (function() {
   var disabled_limit = false; // This will prevent to reset the "disabled" because of the limit at every click
 
   // Helper function to trigger an event on an element
