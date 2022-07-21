@@ -1,330 +1,443 @@
 /**
- * multi.js
- * A user-friendly replacement for select boxes with multiple attribute enabled.
+ * multiselect.js
+ * A user-friendly replacement for select boxes with option groups and multiple selections enabled.
  *
- * Author: Fabian Lindfors
+ * Author: Fabian Lindfors, Kai Wu
  * License: MIT
  */
-var multiselect = (function() {
-  var disabled_limit = false; // This will prevent to reset the "disabled" because of the limit at every click
 
-  // Helper function to trigger an event on an element
-  var trigger_event = function(type, el) {
-    var e = document.createEvent("HTMLEvents");
-    e.initEvent(type, false, true);
-    el.dispatchEvent(e);
-  };
+// TODO: handle duplicates
+// TODO: add tick to the selected layer 2 items
+// TODO: use toggle method
+// TODO: hover show definition...
 
-   // Check if there is a limit and if is reached
-   var check_limit = function (select, settings) {
-    var limit = settings.limit;
-    if (limit > -1) {
-      // Count current selected
-      var selected_count = 0;
-      for (var i = 0; i < select.options.length; i++) {
-        if (select.options[i].selected) {
-          selected_count++;
-        }
-      }
+let multiselect = (function () {
+        let disabled_limit = false; // This will prevent to reset the "disabled" because of the limit at every click
 
-      // Reached the limit
-      if (selected_count === limit) {
-        // kw: check_limit is executed every time after option is toggled so no need to check >=
-        this.disabled_limit = true;
+        // Helper function to trigger an event on an element
+        let trigger_event = function (type, el) {
+            let e = document.createEvent("HTMLEvents");
+            e.initEvent(type, false, true);
+            el.dispatchEvent(e);
+        };
 
-        // Trigger the function (if there is)
-        if (typeof settings.limit_reached === "function") {
-          settings.limit_reached();
-        }
+        // Check if there is a limit and if is reached
+        let check_limit = function (select, settings) {
+            let limit = settings.limit;
+            if (limit > -1) {
+                // Count current selected
+                let selected_count = 0;
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].selected) {
+                        selected_count++;
+                    }
+                }
 
-        // Disable all non-selected option
-        for (var i = 0; i < select.options.length; i++) {
-          var opt = select.options[i];
+                // Reached the limit
+                if (selected_count === limit) {
+                    // kw: check_limit is executed every time after option is toggled so no need to check >=
+                    this.disabled_limit = true;
 
-          if (!opt.selected) {
-            opt.setAttribute("disabled", true);
-          }
-        }
-      } else if (this.disabled_limit) {
-        // Enable options (only if they weren't disabled on init)
-        for (var i = 0; i < select.options.length; i++) {
-          var opt = select.options[i];
+                    // Trigger the function (if there is)
+                    if (typeof settings.limit_reached === "function") {
+                        settings.limit_reached();
+                    }
 
-          if (opt.getAttribute("data-origin-disabled") === "false") {
-            opt.removeAttribute("disabled");    // we can only remove disabled attribute rather than uncheck it
-          }
-        }
+                    // Disable all non-selected option
+                    for (let i = 0; i < select.options.length; i++) {
+                        let opt = select.options[i];
 
-        this.disabled_limit = false;
-      }
-    }
-  };
+                        if (!opt.selected) {
+                            opt.setAttribute("disabled", true);
+                        }
+                    }
+                } else if (this.disabled_limit) {
+                    // Enable options (only if they weren't disabled on init)
+                    for (let i = 0; i < select.options.length; i++) {
+                        let opt = select.options[i];
 
-  // Toggles the target option on the select
-  var toggle_option = function(select, event, settings) {
-    var option = select.options[event.target.getAttribute("multi-index")];  // kw: use string for slicing...
+                        if (opt.getAttribute("data-origin-disabled") === "false") {
+                            opt.removeAttribute("disabled");    // we can only remove disabled attribute rather than uncheck it
+                        }
+                    }
 
-    if (option.disabled) {
-      return;   // if option.disabled: this row is not selectable...
-    }
+                    this.disabled_limit = false;
+                }
+            }
+        };
 
-    option.selected = !option.selected;  // kw: false to true, true to false...
+        // Toggles the target option on the select
+        let toggle_option_group = function (select, event, settings) {
+            let optGroups = select.getElementsByTagName('optgroup');
+            let optGroup = optGroups[event.target.getAttribute("layer1-index")];  // kw: use string for slicing...
 
-    check_limit(select, settings);
+            // ignore the clicks (not clickable) if the option group is disabled initially
+            if (optGroup.disabled) {
+                return;
+            }
 
-    trigger_event("change", select);
-  };
+            let is_selected = optGroup.selected;
+            if (is_selected) {
+                return;
+            }
 
-  // Refreshes an already constructed multi.js instance
-  var refresh_select = function(select, settings) {
-    // Clear columns
-    select.wrapper.selected.innerHTML = "";  // kw: clear inner html of the selected block
-    select.wrapper.non_selected.innerHTML = "";  // kw: clear inner html of the selected block
+            optGroup.selected = true;
 
-    // Add headers to columns
-    if (settings.non_selected_header && settings.selected_header) {
-      var non_selected_header = document.createElement("div");
-      var selected_header = document.createElement("div");
+            for (let optG of optGroups) {
+                if (optG !== optGroup) {
+                    optG.selected = false;
+                }
+            }
 
-      non_selected_header.className = "header";
-      selected_header.className = "header";
+            trigger_event("opt_group_change", select);
+        };
 
-      non_selected_header.innerText = settings.non_selected_header;
-      selected_header.innerText = settings.selected_header;
+        let toggle_option = function (select, event, settings) {
+            let option = select.options[event.target.getAttribute("layer2-index")];  // kw: use string for slicing...
 
-      select.wrapper.non_selected.appendChild(non_selected_header);
-      select.wrapper.selected.appendChild(selected_header);
-    }
+            if (option.disabled) {
+                return;   // if option.disabled: this row is not selectable...
+            }
 
-    // Get search value
-    if (select.wrapper.search) {
-      var query = select.wrapper.search.value; // kw: the search input
-    }
+            option.selected = !option.selected;  // kw: false to true, true to false...
 
-    // Current group
-    var item_group = null;
-    var current_optgroup = null;
+            check_limit(select, settings);  // TODO
 
-    // Loop over select options and add to the non-selected and selected columns
-    for (var i = 0; i < select.options.length; i++) {
-      var option = select.options[i];
+            trigger_event("opt_change", select);
+        };
 
-      var value = option.value;
-      var label = option.textContent || option.innerText;
-      // kw: ? what's the difference between textContent, innerText, text, and value...
+        // Refreshes an already constructed multi.js instance
+        let refresh_layer1 = function (select, settings) {
+            // Clear column
+            select.wrapper.layer1.innerHTML = "";
 
-      var row = document.createElement("a");
-      row.tabIndex = 0;  // kw: make it tabbable
-      row.className = "item";
-      row.innerText = label;
-      row.setAttribute("role", "button");
-      row.setAttribute("data-value", value);
-      row.setAttribute("multi-index", i);  // kw: used later...
+            // Add headers to columns
+            if (settings.layer1_header) {
+                let layer1_header = document.createElement("div");
+                layer1_header.className = "header";
 
-      if (option.disabled) {
-        row.className += " disabled";  // kw: cool
-      }
+                layer1_header.innerText = settings.layer1_header;
+                select.wrapper.layer1.appendChild(layer1_header);
+            }
 
-      // Add row to selected column if option selected
-      if (option.selected) {
-        row.className += " selected";
-        var clone = row.cloneNode(true);
-        select.wrapper.selected.appendChild(clone);
-      }
+            let query = null;
+            if (select.wrapper.search) {
+                query = select.wrapper.search.value;
+            }
 
-      // Create group if entering a new optgroup
-      if (
-        option.parentNode.nodeName == "OPTGROUP" &&
-        option.parentNode != current_optgroup  // kw: ? when do we sent parentNode?
-      ) {
-        current_optgroup = option.parentNode;
-        item_group = document.createElement("div");
-        item_group.className = "item-group";
+            // Loop over option groups and add to the layer 1 column
+            let optGroups = select.getElementsByTagName('optgroup');
+            for (let i = 0; i < optGroups.length; i++) {
+                let optgrp = optGroups[i];
+                // skip empty groups if
+                if (settings.hide_empty_groups && optgrp.childElementCount === 0) {
+                    continue;
+                }
+                let label = optgrp.label;
+                let row = document.createElement("a");
+                // row.tabIndex = 0;
+                row.className = "item";
+                row.innerText = label;
+                if (query) {
+                    row.className += " frozen";
+                } else {
+                    row.setAttribute("role", "button");
+                    row.setAttribute("data-value", label);  // TODO: check
+                    row.setAttribute("layer1-index", i);
 
-        if (option.parentNode.label) {
-          var groupLabel = document.createElement("span");
-          groupLabel.innerHTML = option.parentNode.label;
-          groupLabel.className = "group-label";
-          item_group.appendChild(groupLabel);
-        }
+                    if (optgrp.selected) {
+                        row.className += " selected";
+                    }
 
-        select.wrapper.non_selected.appendChild(item_group);
-      }
+                    if (optgrp.disabled) {
+                        row.className += " disabled";
+                    }
+                }
+                optgrp.row = row;
+                select.wrapper.layer1.appendChild(row)
+            }
+            refresh_counter(select, settings);
+        };
 
-      // Clear group if not inside optgroup
-      if (option.parentNode == select) {
-        item_group = null;
-        current_optgroup = null;
-      }
+        let refresh_layer2 = function (select, settings) {
+            // Clear column
+            select.wrapper.layer2.innerHTML = "";
 
-      // Apply search filtering
-      if (
-        !query ||
-        (query && label.toLowerCase().indexOf(query.toLowerCase()) > -1)  // ignore case...
-      ) {
-        // Append to group if one exists, else just append to wrapper
-        if (item_group != null) {
-          item_group.appendChild(row);
-        } else {
-          select.wrapper.non_selected.appendChild(row);
-        }
-      }
-    }
+            if (settings.layer2_header) {
+                let layer2_header = document.createElement("div");
+                layer2_header.className = "header";
+                layer2_header.innerText = settings.layer2_header;
+                select.wrapper.layer2.appendChild(layer2_header);
+            }
 
-    // Hide empty optgroups
-    if (settings.hide_empty_groups) {
-      var optgroups = document.getElementsByClassName('item-group');
-      for (var i = 0; i < optgroups.length; i++) {
-        // Hide optgroup if optgroup only contains a group label
-        if (optgroups[i].childElementCount < 2) {  // kw: ?
-          optgroups[i].style.display = 'none';  // kw: set style.display to none to hide an element...
-        }
-      }
-    }
-  };
+            let query = null;
+            if (select.wrapper.search) {
+                query = select.wrapper.search.value;
+            }
 
-  // Intializes and constructs an multi.js instance
-  var init = function(select, settings) {
-    /**
-     * Set up settings (optional parameter) and its default values
-     *
-     * Default values:
-     * enable_search : true
-     * search_placeholder : "Search..."
-     */
-    settings = typeof settings !== "undefined" ? settings : {};
+            let optGroups = select.getElementsByTagName('optgroup');
+            let j = 0;
+            for (let i = 0; i < optGroups.length; i++) {
+                let optGroup = optGroups[i];
+                if (optGroup.disabled || (!query && !optGroup.selected)) { // TODO: need to handle conflicts with search query
+                    j += optGroup.childElementCount;
+                    continue;
+                }
+                for (let option of optGroup.children) {
+                    let value = option.value;
+                    let label = option.textContent || option.innerText;
+                    // kw: ? what's the difference between textContent, innerText, text, and value...
 
-    settings["enable_search"] =
-      typeof settings["enable_search"] !== "undefined"    // kw: ? maybe passed an json...
-        ? settings["enable_search"]
-        : true;
-    settings["search_placeholder"] =
-      typeof settings["search_placeholder"] !== "undefined"
-        ? settings["search_placeholder"]
-        : "Search...";
-    settings["non_selected_header"] =
-      typeof settings["non_selected_header"] !== "undefined"
-        ? settings["non_selected_header"]
-        : null;
-    settings["selected_header"] =
-      typeof settings["selected_header"] !== "undefined"
-        ? settings["selected_header"]
-        : null;
-    settings["limit"] =
-      typeof settings["limit"] !== "undefined"
-        ? parseInt(settings["limit"])
-        : -1;
-    if (isNaN(settings["limit"])) {
-      settings["limit"] = -1;
-    }
-    settings["hide_empty_groups"] =
-      typeof settings["hide_empty_groups"] !== "undefined"
-        ? settings["hide_empty_groups"]
-        : false;
+                    let row = document.createElement("a");
+                    // row.tabIndex = 0;  // kw: make it tabbable
+                    row.className = "item";
+                    row.innerText = label;
+                    row.setAttribute("role", "button");
+                    row.setAttribute("data-value", value);
+                    row.setAttribute("layer2-index", j);
+                    j += 1;
 
-    // Check if already initalized
-    if (select.dataset.multijs != null) {  // kw: ? when is multijs first set to true?
-      return;
-    }
+                    if (option.disabled) {
+                        row.className += " disabled";  // kw: cool
+                    }
 
-    // Make sure element is select and multiple is enabled
-    if (select.nodeName != "SELECT" || !select.multiple) {  // kw: ? when is multiple first set?
-      return;
-    }
+                    if (option.selected) {
+                        row.className += " selected";
+                    }
 
-    // Hide select
-    select.style.display = "none";
-    select.setAttribute("data-multijs", true);
+                    // Apply search filtering
+                    if (!query || (query && label.toLowerCase().indexOf(query.toLowerCase()) > -1)) {
+                        select.wrapper.layer2.appendChild(row);
+                    }
+                }
 
-    // Start constructing selector
-    var wrapper = document.createElement("div");
-    wrapper.className = "multi-wrapper";
+            }
+        };
 
-    // Add search bar
-    if (settings.enable_search) {
-      var search = document.createElement("input");
-      search.className = "search-input";
-      search.type = "text";
-      search.setAttribute("placeholder", settings.search_placeholder);
-      search.setAttribute("title", settings.search_placeholder);
+        let refresh_selected = function (select, settings) {
+            select.wrapper.selected_box.innerHTML = '';
+            let has_element = false;
+            for (let opt of select.options) {  // TODO: this might be a bit slow...
+                if (opt.selected) {
+                    let box = document.createElement("span");
+                    box.innerText = opt.textContent || opt.innerText
+                    box.classList.add("opt-box");
+                    // box.opt = opt;
+                    let cross = document.createElement("span");
+                    cross.innerText = '🗙';
+                    cross.classList.add("opt-box-del");
+                    cross["onclick"] = (ev) => {
+                        opt.selected = !opt.selected;
+                        check_limit(select, settings);
+                        trigger_event("opt_change", select);
+                    }
+                    box.appendChild(cross);
+                    select.wrapper.selected_box.appendChild(box);
+                    has_element = true;
+                }
+            }
+            select.wrapper.restart_button.style.display = has_element? "inline-block": "none";
+        };
 
-      search.addEventListener("input", function() {
-        refresh_select(select, settings);
-      });
+        let refresh_counter = function (select, settings) {
+            document.querySelectorAll('.optgrp-counter').forEach(c=>c.remove());
 
-      wrapper.appendChild(search);
-      wrapper.search = search;  // kw: ? watch out for this...
-    }
+            let optGroups = select.getElementsByTagName('optgroup');
+            for (let optgrp of optGroups) {
+                let optgrp_counter = document.createElement('span');
+                optgrp_counter.innerText = '' + Array.from(optgrp.children).reduce((sum, opt)=> sum + opt.selected, 0);
+                optgrp_counter.className = "optgrp-counter";
+                optgrp_counter.style.display = optgrp_counter.innerText > 0 ? 'inline-block' : 'none';
+                optgrp.row.appendChild(optgrp_counter);
+            }
+        };
 
-    // Add columns for selected and non-selected
-    var non_selected = document.createElement("div");
-    non_selected.className = "non-selected-wrapper";
+        // Intializes and constructs an multi.js instance
+        let init = function (select, settings) {
+            /**
+             * Set up settings (optional parameter) and its default values
+             *
+             * Default values:
+             * enable_search : true
+             * search_placeholder : "Search..."
+             */
+            settings = typeof settings !== "undefined" ? settings : {};
 
-    var selected = document.createElement("div");
-    selected.className = "selected-wrapper";
+            settings["enable_search"] =
+                typeof settings["enable_search"] !== "undefined"    // kw: ? maybe passed an json...
+                    ? settings["enable_search"]
+                    : true;
+            settings["search_placeholder"] =
+                typeof settings["search_placeholder"] !== "undefined"
+                    ? settings["search_placeholder"]
+                    : "Search...";
+            settings["layer1_header"] =
+                typeof settings["layer1_header"] !== "undefined"
+                    ? settings["layer1_header"]
+                    : null;
+            settings["layer2_header"] =
+                typeof settings["layer2_header"] !== "undefined"
+                    ? settings["layer2_header"]
+                    : null;
+            settings["limit"] =
+                typeof settings["limit"] !== "undefined"
+                    ? parseInt(settings["limit"])
+                    : -1;
+            settings["default_optgroup"] =
+                typeof settings["default_optgroup"] !== "undefined"
+                    ? parseInt(settings["default_optgroup"])
+                    : 0;
+            if (isNaN(settings["limit"])) {
+                settings["limit"] = -1;
+            }
+            settings["hide_empty_groups"] =
+                typeof settings["hide_empty_groups"] !== "undefined"
+                    ? settings["hide_empty_groups"]
+                    : true;   // hide empty groups by default
 
-    // Add click handler to toggle the selected status
-    wrapper.addEventListener("click", function(event) {
-      if (event.target.getAttribute("multi-index")) {  // kw: only activated when we click on a "row" element defined in refresh_select
-        toggle_option(select, event, settings);
-      }
-    });
+            // Check if already initialized
+            if (select.dataset.multijs != null) {  // TODO: kw: ? when is multijs first set to true?
+                return;
+            }
 
-    // Add keyboard handler to toggle the selected status
-    wrapper.addEventListener("keypress", function(event) {
-      var is_action_key = event.keyCode === 32 || event.keyCode === 13;
-      var is_option = event.target.getAttribute("multi-index");
+            // Make sure element is select and there are optgroups and multiple is enabled
+            if (select.nodeName !== "SELECT" || !select.multiple || !select.hasChildNodes('optgroup')) {  // kw: multiple is specified in the html file
+                return;
+            }
 
-      if (is_option && is_action_key) {
-        // Prevent the default action to stop scrolling when space is pressed
-        event.preventDefault();
-        toggle_option(select, event, settings);
-      }
-    });
+            // Hide select
+            select.style.display = "none";
+            select.setAttribute("data-multijs", true);  // TODO: what does "data-multijs" do here...
 
-    wrapper.appendChild(non_selected);
-    wrapper.appendChild(selected);
+            // Start constructing selector
+            let wrapper = document.createElement("div");
+            wrapper.className = "multi-wrapper";
 
-    wrapper.non_selected = non_selected;
-    wrapper.selected = selected;
+            // Add search bar
+            if (settings.enable_search) {
+                let search = document.createElement("input");
+                search.className = "search-input";
+                search.type = "search";
+                search.setAttribute("placeholder", settings.search_placeholder);
+                search.setAttribute("title", settings.search_placeholder);
 
-    select.wrapper = wrapper;
+                search.addEventListener("input", function () {
+                    // refresh_select(select, settings);
+                    refresh_layer1(select, settings);
+                    refresh_layer2(select, settings);
+                });
 
-    // Add multi.js wrapper after select element
-    select.parentNode.insertBefore(wrapper, select.nextSibling);
+                wrapper.appendChild(search);
+                wrapper.search = search;
+            }
 
-    // Save current state
-    for (var i = 0; i < select.options.length; i++) {
-      var option = select.options[i];
-      option.setAttribute("data-origin-disabled", option.disabled); // kw: disabled is one of the attribute
-    }
+            // Add columns for layer 1 and layer 2
+            let layer1 = document.createElement("div");  //kw: was non_selected
+            layer1.className = "layer1-wrapper";   // kw: was non_selected non-selected-wrapper
 
-    // Check limit on initialization
-    check_limit(select, settings);
+            let layer2 = document.createElement("div");  //kw: was selected
+            layer2.className = "layer2-wrapper";   // kw: was selected selected-wrapper
 
-    // Initialize selector with values from select element
-    refresh_select(select, settings);
+            let selected_box = document.createElement("div");
+            selected_box.className = 'multi-selected-box';
 
-    // Refresh selector when select values change
-    select.addEventListener("change", function() {  // kw: the change event is dispatched ealier...
-      refresh_select(select, settings);
-    });
-  };
+            let restart_button = document.createElement("div");
+            restart_button.className = 'multi-wrapper-restart';
+            restart_button.innerHTML = "<span>↺</span>"
+            restart_button.style.display = 'none';
+            restart_button["onclick"] = (ev) => {
+                Array.from(select.options).map((opt)=>opt.selected=false);
+                check_limit(select, settings);
+                trigger_event("opt_change", select);
+            };
 
-  return init;
-})();
+            // Add click handler to toggle the selected status
+            wrapper.addEventListener("click", function (event) {
+                if (event.target.getAttribute("layer1-index")) {
+                    toggle_option_group(select, event, settings);
+                }
+            });
+
+            // Add click handler to toggle the selected status
+            wrapper.addEventListener("click", function (event) {
+                if (event.target.getAttribute("layer2-index")) {
+                    toggle_option(select, event, settings);
+                }
+            });
+
+            wrapper.appendChild(layer1);
+            wrapper.appendChild(layer2);
+
+            wrapper.layer1 = layer1;
+            wrapper.layer2 = layer2;
+            wrapper.selected_box = selected_box;
+            wrapper.restart_button = restart_button;
+            select.wrapper = wrapper;
+
+            // Add multi.js wrapper after select element
+            select.parentNode.insertBefore(wrapper, select.nextSibling);
+            wrapper.parentNode.insertBefore(restart_button, wrapper.nextSibling);
+            wrapper.parentNode.insertBefore(selected_box, wrapper.nextSibling);
+
+            // Save current state
+            for (let i = 0; i < select.options.length; i++) {
+                let option = select.options[i];
+                option.setAttribute("data-origin-disabled", option.disabled); // kw: disabled is one of the attribute
+            }
+
+            // Check limit on initialization
+            check_limit(select, settings);
+
+            // Initialize selector with values from select element
+
+            // settings
+
+            // set the default_optgoup as "selected"
+            let optGroups = select.getElementsByTagName('optgroup');
+            let i = settings.default_optgroup;
+            if (optGroups[i] !== undefined && !optGroups[i].disabled) {
+                optGroups[i].selected = true;
+            } else {  // find the first optgroup that is not disabled
+                for (let optG of optGroups) {
+                    if (!optG.disabled) {
+                        optG.selected = true;
+                        break;
+                    }
+                }
+            }
+
+            refresh_layer1(select, settings);
+            refresh_layer2(select, settings);
+            refresh_selected(select, settings);
+
+            // Refresh selector when select values change
+            select.addEventListener("opt_group_change", function () {
+                refresh_layer1(select, settings);
+                refresh_layer2(select, settings);
+            });
+
+            // Refresh selector when select values change
+            select.addEventListener("opt_change", function () {
+                refresh_layer2(select, settings);
+                refresh_selected(select, settings);
+                refresh_counter(select, settings);
+            });
+        };
+
+        return init;
+    })();
 
 // Add jQuery wrapper if jQuery is present
 if (typeof jQuery !== "undefined") {
-  (function($) {
-    $.fn.multi = function(settings) {
-      settings = typeof settings !== "undefined" ? settings : {};
+    (function ($) {
+        $.fn.multiselect = function (settings) {
+            settings = typeof settings !== "undefined" ? settings : {};
 
-      return this.each(function() {
-        var $select = $(this);
+            return this.each(function () {
+                let $select = $(this);
 
-        multi($select.get(0), settings);
-      });
-    };
-  })(jQuery);
+                multiselect($select.get(0), settings);
+            });
+        };
+    })(jQuery);
 }
