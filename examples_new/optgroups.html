@@ -33,25 +33,30 @@
                     name="favorite_fruits"
                     id="fruit_select"
                 >
+                    <optgroup label="Duplicate">
+                        <option value="Cherry" data-descr="This is a Cherry">Cherry</option>
+                        <option value="Watermelon" data-descr="This is a Watermelon that we bought from one of the best regions in the world in terms of agriculture, and it is really delicious.">Watermelon</option>
+                        <option value="Mandarin Orange" data-descr="This is a Mandarin Orange">Mandarin Orange</option>
+                    </optgroup>
                     <optgroup label="Good fruit">
                         <option>Apple</option>
                         <option>Banana</option>
                         <option>Blueberry</option>
-                        <option>Cherry</option>
+                        <option value="Cherry">Cherry</option>
                     </optgroup>
                     <optgroup label="Better fruit">
                         <option>Grapefruit</option>
                         <option>Kiwi</option>
                         <option>Lemon</option>
-                        <option>Lime</option>
-                        <option>Mango</option>
+                        <option value="Lime">Lime</option>
+                        <option value="Mango">Mango</option>
                         <option>Orange</option>
                         <option>Papaya</option>
                     </optgroup>
                     <optgroup label="Best fruit">
-                        <option>Watermelon</option>
+                        <option value="Watermelon">Watermelon</option>
                         <option>Strawberry</option>
-                        <option>Mandarin Orange</option>
+                        <option value="Mandarin Orange">Mandarin Orange</option>
                         <option>Pear</option>
                     </optgroup>
                 </select>
@@ -61,7 +66,12 @@
         <script>
             var select = document.getElementById("fruit_select");
             multiselect(select, {
-                enable_search: true
+                enable_search: true,
+                limit: 10,
+                layer1_header: 'Categories',
+                layer2_header: 'Factors',
+                search_placeholder: 'Search for factors...',
+                default_optgroup: 0
             });
         </script>
     </body>

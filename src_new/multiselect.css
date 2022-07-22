@@ -20,9 +20,9 @@
 
 .multi-wrapper .layer2-wrapper {
     overflow-y: scroll;
+    overflow-x: hidden;
     width: 65%;
 }
-
 
 .multi-wrapper .layer1-wrapper {
     background: #fafafa;
@@ -44,12 +44,48 @@
 .multi-wrapper .item {
     cursor: pointer;
     display: block;
+    position: relative;
     padding: 5px 10px;
 }
 
 .multi-wrapper .item:hover {
     background: #ececec;
     border-radius: 2px;
+}
+
+.multi-wrapper .item .opt-data-descr {
+  visibility: hidden;
+  max-width: 30em;
+  /*min-width: 300px;*/
+  background-color: #555;
+  color: #fff;
+  font-family: system-ui;
+  font-size: 0.9em;
+  text-align: justify;
+  border-radius: 0.5em;
+  padding: 0.5em 0.65em 0.5em 0.65em;
+  position: fixed;
+  z-index: 2;
+  margin-left: 1em;
+  opacity: 0;
+  transition: opacity 0.3s ease-out 0.5s;
+}
+
+.multi-wrapper .item:hover .opt-data-descr {
+  visibility: visible;
+  opacity: 0.9;
+}
+
+.multi-wrapper .item .opt-data-descr::after {
+  content: "";
+  position: absolute;
+  top: 15%;
+  left: -0.6em;
+  /*margin-left: -5px;*/
+  border-width: 0.25em;
+  border-style: solid;
+  border-color: transparent #555 transparent  transparent;
+  opacity: 0.9;
 }
 
 .multi-wrapper .item-group {
@@ -104,6 +140,8 @@
 }
 
 .multi-wrapper .layer1-wrapper .optgrp-counter {
+    cursor: default;
+    box-sizing: border-box;
     float: right;
     display: inline-block;
     color: white;
@@ -115,8 +153,9 @@
     height: 1.25em;
     border-radius: 0.35em;
     text-align: center;
+    position: relative;
+    top: 0.2em;
 }
-
 
 .multi-selected-box {
     box-sizing: border-box;
