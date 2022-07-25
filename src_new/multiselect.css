@@ -53,10 +53,10 @@
     border-radius: 2px;
 }
 
-.multi-wrapper .item .opt-data-descr {
-  visibility: hidden;
+.opt-descr-wrapper .opt-descr-visible {
+  /*visibility: hidden;*/
+  display: inline;
   max-width: 30em;
-  /*min-width: 300px;*/
   background-color: #555;
   color: #fff;
   font-family: system-ui;
@@ -64,19 +64,23 @@
   text-align: justify;
   border-radius: 0.5em;
   padding: 0.5em 0.65em 0.5em 0.65em;
-  position: fixed;
+  position: absolute;
   z-index: 2;
   margin-left: 1em;
-  opacity: 0;
-  transition: opacity 0.3s ease-out 0.5s;
-}
-
-.multi-wrapper .item:hover .opt-data-descr {
-  visibility: visible;
   opacity: 0.9;
+  /*transition: opacity 0.3s ease-out 0.5s;*/
 }
 
-.multi-wrapper .item .opt-data-descr::after {
+.opt-descr-wrapper .opt-descr-hidden {
+    display: none;
+}
+
+/*.multi-wrapper .item:hover .opt-data-descr {*/
+/*  visibility: visible;*/
+/*  opacity: 0.9;*/
+/*}*/
+
+.opt-descr-wrapper .opt-descr-visible::after {
   content: "";
   position: absolute;
   top: 15%;

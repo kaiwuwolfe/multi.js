@@ -177,6 +177,7 @@ let multiselect = (function () {
     let refresh_layer2 = function (select, settings) {
         // Clear column
         select.wrapper.layer2.innerHTML = "";
+        select.wrapper.tooltip_container.innerHTML = "";
 
         if (settings.layer2_header) {
             let layer2_header = document.createElement("div");
@@ -219,10 +220,32 @@ let multiselect = (function () {
                 }
 
                 if (settings.show_tooltip && option.hasAttribute("data-descr")) {
-                    let descr = document.createElement("span");
+                    let descr = document.createElement("div");
                     descr.innerText = option.getAttribute("data-descr");
-                    descr.className = "opt-data-descr";
-                    row.appendChild(descr);
+                    descr.className = "opt-descr-hidden";
+                    select.wrapper.tooltip_container.appendChild(descr);
+                    row.descr = descr;
+                    let timeout = null;
+                    row.timeout = timeout;
+                    row.addEventListener('mouseenter', function (ev) {
+                        if (row.timeout != null) { clearTimeout(row.timeout); }
+
+                        row.timeout = setTimeout(function () {
+                            let boundRect = ev.target.getBoundingClientRect();
+                            row.descr.className = 'opt-descr-visible';
+                            row.descr.style.left = `${boundRect.left+boundRect.width*2/3}` + 'px';
+                            row.descr.style.top = `${boundRect.top}` + 'px';
+                        }, 500)
+
+                    });
+
+                    row.addEventListener('mouseleave', function (ev) {
+                        if (row.timeout != null) {
+                            clearTimeout(row.timeout);
+                            row.timeout = null;
+                        }
+                        row.descr.className = 'opt-descr-hidden';
+                    });
                 }
 
                 // Apply search filtering
@@ -363,9 +386,11 @@ let multiselect = (function () {
         let layer2 = document.createElement("div");  //kw: was selected
         layer2.className = "layer2-wrapper";   // kw: was selected selected-wrapper
 
+        // add the block displaying selected options
         let selected_box = document.createElement("div");
         selected_box.className = 'multi-selected-box';
 
+        // add the restart button
         let restart_button = document.createElement("div");
         restart_button.className = 'multi-wrapper-restart';
         restart_button.innerHTML = "<span>↺</span>"
@@ -376,6 +401,10 @@ let multiselect = (function () {
             check_limit(select, settings);
             trigger_event("opt_change", select);
         };
+
+        // add the hidden block that stores tooltip blocks
+        let tooltip_container = document.createElement('div');
+        tooltip_container.className = 'opt-descr-wrapper';
 
         // Add click handler to toggle the selected status
         wrapper.addEventListener("click", function (event) {
@@ -398,10 +427,12 @@ let multiselect = (function () {
         wrapper.layer2 = layer2;
         wrapper.selected_box = selected_box;
         wrapper.restart_button = restart_button;
+        wrapper.tooltip_container = tooltip_container;
         select.wrapper = wrapper;
 
         // Add multi.js wrapper after select element
         select.parentNode.insertBefore(wrapper, select.nextSibling);
+        wrapper.parentNode.insertBefore(tooltip_container, wrapper.nextSibling);
         wrapper.parentNode.insertBefore(restart_button, wrapper.nextSibling);
         wrapper.parentNode.insertBefore(selected_box, wrapper.nextSibling);
 
